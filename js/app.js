@@ -747,33 +747,180 @@ const XLSX_HEADERS = ['اسم المشترك','رقم العداد','نوع ال
 function isXlsxReady(){
   return typeof XLSX !== 'undefined' && XLSX && XLSX.utils;
 }
-function downloadXlsxTemplate(){
-  if(!isXlsxReady()){ toast('مكتبة Excel لم تُحمَّل بعد، تحقق من الاتصال بالإنترنت أو أعد فتح الصفحة', 'error'); return; }
-  const sample = { 'اسم المشترك':'محمد أحمد علي', 'رقم العداد':'1_50', 'نوع الاشتراك':'منزلي', 'المنطقة':'حي النور', 'المربع':'مربع 1', 'آخر قراءة':0, 'رصيد سابق':0, 'الهاتف':'777000000' };
-  const ws = XLSX.utils.json_to_sheet([sample], { header: XLSX_HEADERS });
-  ws['!cols'] = XLSX_HEADERS.map(()=>({ wch: 18 }));
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'المشتركون');
-  XLSX.writeFile(wb, 'قالب_استيراد_المشتركين.xlsx');
+
+/* ============================================================
+   ✅ دوال معدّلة لدعم حفظ الملفات في تطبيقات Capacitor (APK)
+   ============================================================ */
+
+/* دالة مساعدة لحفظ ملف في تطبيق Capacitor أو المتصفح */
+async function saveFileCapacitorOrBrowser(fileName, data, mimeType, isBase64 = false) {
+  try {
+    // التحقق إذا كنا داخل تطبيق Capacitor
+    if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+      const { Filesystem } = window.Capacitor.Plugins;
+      
+      // محاولة الحفظ في مجلد Documents أولاً
+      try {
+        await Filesystem.writeFile({
+          path: fileName,
+          directory: 'DOCUMENTS',
+          data: isBase64 ? data : data,
+          encoding: isBase64 ? 'base64' : 'utf8'
+        });
+        return { success: true, location: 'Documents' };
+      } catch (docError) {
+        // إذا فشل، جرب External (التخزين الخارجي)
+        try {
+          await Filesystem.writeFile({
+            path: fileName,
+            directory: 'EXTERNAL',
+            data: isBase64 ? data : data,
+            encoding: isBase64 ? 'base64' : 'utf8'
+          });
+          return { success: true, location: 'External Storage' };
+        } catch (extError) {
+          // إذا فشل الكل، جرب Data (التخزين الداخلي للتطبيق)
+          await Filesystem.writeFile({
+            path: fileName,
+            directory: 'DATA',
+            data: isBase64 ? data : data,
+            encoding: isBase64 ? 'base64' : 'utf8'
+          });
+          return { success: true, location: 'App Data' };
+        }
+      }
+    } else {
+      // وضع المتصفح العادي - استخدام طريقة التحميل التقليدية
+      const blob = new Blob([data], { type: mimeType || 'application/octet-stream' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      return { success: true, location: 'Browser Download' };
+    }
+  } catch (error) {
+    console.error('خطأ في حفظ الملف:', error);
+    return { success: false, error: error.message };
+  }
 }
-function downloadSubscribersXlsx(){
-  if(!isXlsxReady()){ toast('مكتبة Excel لم تُحمَّل بعد، تحقق من الاتصال بالإنترنت أو أعد فتح الصفحة', 'error'); return; }
-  const rows = DB.subscribers.map(s=>{
-    const type = DB.subscription_types.find(t=>t.id===s.subscription_type_id);
-    const area = DB.areas.find(a=>a.id===s.area_id);
-    const square = DB.squares.find(sq=>sq.id===s.square_id);
-    return {
-      'رقم المشترك': s.subscriber_number, 'اسم المشترك': s.subscriber_name, 'رقم العداد': s.meter_number||'',
-      'نوع الاشتراك': type?type.type_name:'', 'المنطقة': area?area.area_name:'', 'المربع': square?square.square_name:'',
-      'آخر قراءة': s.last_reading_value, 'رصيد سابق': s.last_balance, 'الهاتف': s.phone||'', 'الحالة': s.status
+
+/* دالة تحميل قالب Excel (معدّلة) */
+async function downloadXlsxTemplate() {
+  if (!isXlsxReady()) {
+    toast('⚠️ مكتبة Excel لم تُحمَّل بعد، تحقق من الاتصال بالإنترنت أو أعد فتح الصفحة', 'error');
+    return;
+  }
+  
+  try {
+    const sample = { 
+      'اسم المشترك': 'محمد أحمد علي', 
+      'رقم العداد': '1_50', 
+      'نوع الاشتراك': 'منزلي', 
+      'المنطقة': 'حي النور', 
+      'المربع': 'مربع 1', 
+      'آخر قراءة': 0, 
+      'رصيد سابق': 0, 
+      'الهاتف': '777000000' 
     };
-  });
-  const ws = XLSX.utils.json_to_sheet(rows);
-  ws['!cols'] = ['رقم المشترك','اسم المشترك','رقم العداد','نوع الاشتراك','المنطقة','المربع','آخر قراءة','رصيد سابق','الهاتف','الحالة'].map(()=>({wch:16}));
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'المشتركون');
-  XLSX.writeFile(wb, 'المشتركون_' + todayISO() + '.xlsx');
+    
+    const ws = XLSX.utils.json_to_sheet([sample], { header: XLSX_HEADERS });
+    ws['!cols'] = XLSX_HEADERS.map(() => ({ wch: 18 }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'المشتركون');
+    const excelData = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    
+    const fileName = 'قالب_استيراد_المشتركين.xlsx';
+    
+    // تحويل البيانات إلى base64 للتخزين في Capacitor
+    const base64Data = btoa(
+      new Uint8Array(excelData).reduce(
+        (data, byte) => data + String.fromCharCode(byte), ''
+      )
+    );
+    
+    const result = await saveFileCapacitorOrBrowser(fileName, base64Data, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', true);
+    
+    if (result.success) {
+      const locationMap = {
+        'Documents': 'مجلد المستندات (Documents)',
+        'External Storage': 'التخزين الخارجي',
+        'App Data': 'التخزين الداخلي للتطبيق',
+        'Browser Download': 'مجلد التنزيلات (Downloads)'
+      };
+      toast(`✅ تم حفظ القالب في ${locationMap[result.location] || result.location}`, 'success');
+    } else {
+      toast('❌ تعذر حفظ القالب: ' + (result.error || 'خطأ غير معروف'), 'error');
+    }
+  } catch (error) {
+    console.error(error);
+    toast('❌ حدث خطأ أثناء تحميل القالب', 'error');
+  }
 }
+
+/* دالة تصدير المشتركين إلى Excel (معدّلة) */
+async function downloadSubscribersXlsx() {
+  if (!isXlsxReady()) {
+    toast('⚠️ مكتبة Excel لم تُحمَّل بعد، تحقق من الاتصال بالإنترنت أو أعد فتح الصفحة', 'error');
+    return;
+  }
+  
+  try {
+    const rows = DB.subscribers.map(s => {
+      const type = DB.subscription_types.find(t => t.id === s.subscription_type_id);
+      const area = DB.areas.find(a => a.id === s.area_id);
+      const square = DB.squares.find(sq => sq.id === s.square_id);
+      return {
+        'رقم المشترك': s.subscriber_number,
+        'اسم المشترك': s.subscriber_name,
+        'رقم العداد': s.meter_number || '',
+        'نوع الاشتراك': type ? type.type_name : '',
+        'المنطقة': area ? area.area_name : '',
+        'المربع': square ? square.square_name : '',
+        'آخر قراءة': s.last_reading_value,
+        'رصيد سابق': s.last_balance,
+        'الهاتف': s.phone || '',
+        'الحالة': s.status
+      };
+    });
+    
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = ['رقم المشترك', 'اسم المشترك', 'رقم العداد', 'نوع الاشتراك', 'المنطقة', 'المربع', 'آخر قراءة', 'رصيد سابق', 'الهاتف', 'الحالة'].map(() => ({ wch: 16 }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'المشتركون');
+    const excelData = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    
+    const fileName = 'المشتركون_' + todayISO() + '.xlsx';
+    
+    // تحويل البيانات إلى base64 للتخزين في Capacitor
+    const base64Data = btoa(
+      new Uint8Array(excelData).reduce(
+        (data, byte) => data + String.fromCharCode(byte), ''
+      )
+    );
+    
+    const result = await saveFileCapacitorOrBrowser(fileName, base64Data, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', true);
+    
+    if (result.success) {
+      const locationMap = {
+        'Documents': 'مجلد المستندات (Documents)',
+        'External Storage': 'التخزين الخارجي',
+        'App Data': 'التخزين الداخلي للتطبيق',
+        'Browser Download': 'مجلد التنزيلات (Downloads)'
+      };
+      toast(`✅ تم حفظ الملف في ${locationMap[result.location] || result.location}`, 'success');
+    } else {
+      toast('❌ تعذر حفظ الملف: ' + (result.error || 'خطأ غير معروف'), 'error');
+    }
+  } catch (error) {
+    console.error(error);
+    toast('❌ حدث خطأ أثناء تصدير البيانات', 'error');
+  }
+}
+
+/* دالة استيراد المشتركين من Excel (نفس الكود الأصلي) */
 function handleXlsxImport(e){
   const file = e.target.files[0];
   if(!file) return;
@@ -1698,14 +1845,34 @@ function renderSettings(root){
     DB.settings.currency = document.getElementById('s_currency').value.trim() || 'ريال';
     persist(); toast('تم حفظ الإعدادات', 'success');
   });
-  document.getElementById('exportBtn').addEventListener('click', ()=>{
-    const blob = new Blob([JSON.stringify(DB, null, 2)], {type:'application/json'});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'نسخة_احتياطية_' + todayISO() + '.json';
-    a.click();
-    toast('تم تنزيل النسخة الاحتياطية', 'success');
+  
+  /* ============================================================
+     ✅ دالة تصدير النسخة الاحتياطية (معدّلة)
+     ============================================================ */
+  document.getElementById('exportBtn').addEventListener('click', async ()=>{
+    try {
+      const fileName = 'نسخة_احتياطية_' + todayISO() + '.json';
+      const jsonData = JSON.stringify(DB, null, 2);
+      
+      const result = await saveFileCapacitorOrBrowser(fileName, jsonData, 'application/json', false);
+      
+      if (result.success) {
+        const locationMap = {
+          'Documents': 'مجلد المستندات (Documents)',
+          'External Storage': 'التخزين الخارجي',
+          'App Data': 'التخزين الداخلي للتطبيق',
+          'Browser Download': 'مجلد التنزيلات (Downloads)'
+        };
+        toast(`✅ تم حفظ النسخة في ${locationMap[result.location] || result.location}`, 'success');
+      } else {
+        toast('❌ تعذر حفظ النسخة: ' + (result.error || 'خطأ غير معروف'), 'error');
+      }
+    } catch (error) {
+      console.error('خطأ في تصدير النسخة الاحتياطية:', error);
+      toast('❌ حدث خطأ أثناء تصدير النسخة الاحتياطية', 'error');
+    }
   });
+  
   document.getElementById('importFile').addEventListener('change', (e)=>{
     const file = e.target.files[0];
     if(!file) return;
