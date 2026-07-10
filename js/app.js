@@ -742,15 +742,39 @@ function deleteSubscriber(id){
   });
 }
 
-/* ---------- 7ب) استيراد/تصدير Excel (xlsx) للمشتركين ---------- */
+/* ============================================================
+   ✅ 7ب) استيراد/تصدير Excel (xlsx) للمشتركين — معدّل بالكامل
+   ============================================================ */
 const XLSX_HEADERS = ['اسم المشترك','رقم العداد','نوع الاشتراك','المنطقة','المربع','آخر قراءة','رصيد سابق','الهاتف'];
 function isXlsxReady(){
   return typeof XLSX !== 'undefined' && XLSX && XLSX.utils;
 }
 
-/* ============================================================
-   ✅ دوال معدّلة لدعم حفظ الملفات في تطبيقات Capacitor (APK)
-   ============================================================ */
+/* دالة مساعدة لإنشاء المجلد الخاص بالتطبيق داخل Documents */
+async function ensureAppFolder() {
+  try {
+    if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+      const { Filesystem } = window.Capacitor.Plugins;
+      const folderName = 'NabaaBilling';
+      
+      try {
+        await Filesystem.mkdir({
+          path: folderName,
+          directory: 'DOCUMENTS',
+          recursive: true
+        });
+        return { success: true, path: folderName, directory: 'DOCUMENTS' };
+      } catch (mkdirError) {
+        // إذا كان المجلد موجوداً بالفعل، نستمر
+        return { success: true, path: folderName, directory: 'DOCUMENTS' };
+      }
+    }
+    return { success: false };
+  } catch (error) {
+    console.warn('تعذر إنشاء المجلد:', error);
+    return { success: false };
+  }
+}
 
 /* دالة مساعدة لحفظ ملف في تطبيق Capacitor أو المتصفح */
 async function saveFileCapacitorOrBrowser(fileName, data, mimeType, isBase64 = false) {
@@ -759,41 +783,67 @@ async function saveFileCapacitorOrBrowser(fileName, data, mimeType, isBase64 = f
     if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
       const { Filesystem } = window.Capacitor.Plugins;
       
-      // محاولة الحفظ في مجلد Documents أولاً
+      // إنشاء المجلد الخاص بالتطبيق
+      const folder = await ensureAppFolder();
+      const folderPath = folder.success ? folder.path : '';
+      const fullPath = folderPath ? folderPath + '/' + fileName : fileName;
+      const directory = folder.success ? folder.directory : 'DOCUMENTS';
+      
+      let finalData = data;
+      let encoding = 'utf8';
+      
+      if (isBase64) {
+        finalData = data;
+        encoding = 'base64';
+      }
+      
+      // محاولة الحفظ في مجلد Documents
       try {
         await Filesystem.writeFile({
-          path: fileName,
-          directory: 'DOCUMENTS',
-          data: isBase64 ? data : data,
-          encoding: isBase64 ? 'base64' : 'utf8'
+          path: fullPath,
+          directory: directory,
+          data: finalData,
+          encoding: encoding
         });
-        return { success: true, location: 'Documents' };
+        return { success: true, location: 'Documents/' + folderPath };
       } catch (docError) {
-        // إذا فشل، جرب External (التخزين الخارجي)
+        console.warn('فشل الحفظ في Documents، جرب External:', docError);
         try {
           await Filesystem.writeFile({
-            path: fileName,
+            path: fullPath,
             directory: 'EXTERNAL',
-            data: isBase64 ? data : data,
-            encoding: isBase64 ? 'base64' : 'utf8'
+            data: finalData,
+            encoding: encoding
           });
-          return { success: true, location: 'External Storage' };
+          return { success: true, location: 'External Storage/' + folderPath };
         } catch (extError) {
-          // إذا فشل الكل، جرب Data (التخزين الداخلي للتطبيق)
+          console.warn('فشل الحفظ في External، جرب Data:', extError);
           await Filesystem.writeFile({
-            path: fileName,
+            path: fullPath,
             directory: 'DATA',
-            data: isBase64 ? data : data,
-            encoding: isBase64 ? 'base64' : 'utf8'
+            data: finalData,
+            encoding: encoding
           });
-          return { success: true, location: 'App Data' };
+          return { success: true, location: 'App Data/' + folderPath };
         }
       }
     } else {
-      // وضع المتصفح العادي - استخدام طريقة التحميل التقليدية
-      const blob = new Blob([data], { type: mimeType || 'application/octet-stream' });
+      // وضع المتصفح العادي
+      let blobData = data;
+      if (isBase64) {
+        const byteCharacters = atob(data);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        blobData = new Blob([byteArray], { type: mimeType || 'application/octet-stream' });
+      } else {
+        blobData = new Blob([data], { type: mimeType || 'application/json' });
+      }
+      
       const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
+      a.href = URL.createObjectURL(blobData);
       a.download = fileName;
       document.body.appendChild(a);
       a.click();
@@ -834,23 +884,18 @@ async function downloadXlsxTemplate() {
     
     const fileName = 'قالب_استيراد_المشتركين.xlsx';
     
-    // تحويل البيانات إلى base64 للتخزين في Capacitor
-    const base64Data = btoa(
-      new Uint8Array(excelData).reduce(
-        (data, byte) => data + String.fromCharCode(byte), ''
-      )
-    );
+    // تحويل البيانات إلى base64
+    let binary = '';
+    const bytes = new Uint8Array(excelData);
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const base64Data = btoa(binary);
     
     const result = await saveFileCapacitorOrBrowser(fileName, base64Data, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', true);
     
     if (result.success) {
-      const locationMap = {
-        'Documents': 'مجلد المستندات (Documents)',
-        'External Storage': 'التخزين الخارجي',
-        'App Data': 'التخزين الداخلي للتطبيق',
-        'Browser Download': 'مجلد التنزيلات (Downloads)'
-      };
-      toast(`✅ تم حفظ القالب في ${locationMap[result.location] || result.location}`, 'success');
+      toast(`✅ تم حفظ القالب في: ${result.location}`, 'success');
     } else {
       toast('❌ تعذر حفظ القالب: ' + (result.error || 'خطأ غير معروف'), 'error');
     }
@@ -894,23 +939,18 @@ async function downloadSubscribersXlsx() {
     
     const fileName = 'المشتركون_' + todayISO() + '.xlsx';
     
-    // تحويل البيانات إلى base64 للتخزين في Capacitor
-    const base64Data = btoa(
-      new Uint8Array(excelData).reduce(
-        (data, byte) => data + String.fromCharCode(byte), ''
-      )
-    );
+    // تحويل البيانات إلى base64
+    let binary = '';
+    const bytes = new Uint8Array(excelData);
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const base64Data = btoa(binary);
     
     const result = await saveFileCapacitorOrBrowser(fileName, base64Data, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', true);
     
     if (result.success) {
-      const locationMap = {
-        'Documents': 'مجلد المستندات (Documents)',
-        'External Storage': 'التخزين الخارجي',
-        'App Data': 'التخزين الداخلي للتطبيق',
-        'Browser Download': 'مجلد التنزيلات (Downloads)'
-      };
-      toast(`✅ تم حفظ الملف في ${locationMap[result.location] || result.location}`, 'success');
+      toast(`✅ تم حفظ الملف في: ${result.location}`, 'success');
     } else {
       toast('❌ تعذر حفظ الملف: ' + (result.error || 'خطأ غير معروف'), 'error');
     }
@@ -920,7 +960,7 @@ async function downloadSubscribersXlsx() {
   }
 }
 
-/* دالة استيراد المشتركين من Excel (نفس الكود الأصلي) */
+/* دالة استيراد المشتركين من Excel */
 function handleXlsxImport(e){
   const file = e.target.files[0];
   if(!file) return;
@@ -975,6 +1015,10 @@ function handleXlsxImport(e){
   };
   reader.readAsArrayBuffer(file);
 }
+
+/* ============================================================
+   باقي الكود الأصلي (أنواع الاشتراك، المناطق، الدورات، القراءات، الفواتير، التقارير، المتحصلون، المستخدمون، الإعدادات، تسجيل الدخول، التهيئة)
+   ============================================================ */
 
 /* ---------- 8) أنواع الاشتراك ---------- */
 function renderTypes(root){
@@ -1857,13 +1901,7 @@ function renderSettings(root){
       const result = await saveFileCapacitorOrBrowser(fileName, jsonData, 'application/json', false);
       
       if (result.success) {
-        const locationMap = {
-          'Documents': 'مجلد المستندات (Documents)',
-          'External Storage': 'التخزين الخارجي',
-          'App Data': 'التخزين الداخلي للتطبيق',
-          'Browser Download': 'مجلد التنزيلات (Downloads)'
-        };
-        toast(`✅ تم حفظ النسخة في ${locationMap[result.location] || result.location}`, 'success');
+        toast(`✅ تم حفظ النسخة في: ${result.location}`, 'success');
       } else {
         toast('❌ تعذر حفظ النسخة: ' + (result.error || 'خطأ غير معروف'), 'error');
       }
@@ -1990,7 +2028,6 @@ async function init(){
   if(!DB.users || !DB.users.length){ DB.users = emptyDB().users; await persist(); }
 
   if(CFG.REQUIRE_LOGIN === false){
-    // وضع المعاينة السريعة: يدخل مباشرة كمدير بدون شاشة تسجيل دخول
     CURRENT_USER = DB.users.find(u=>u.role==='admin') || DB.users[0];
     startApp();
   }else{
