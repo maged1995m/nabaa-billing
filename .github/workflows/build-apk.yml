@@ -1,6 +1,5 @@
 name: بناء APK
 
-# يعمل تلقائياً عند رفع تحديث لفرع main، أو يدوياً بالضغط على "Run workflow" من تبويب Actions
 on:
   workflow_dispatch:
   push:
@@ -16,7 +15,7 @@ jobs:
       - name: تجهيز Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 22
 
       - name: تجهيز Java (مطلوب لبناء أندرويد)
         uses: actions/setup-java@v4
@@ -24,20 +23,29 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: تثبيت الاعتماديات (Capacitor + xlsx وملفاتها الجاهزة تلقائياً)
+      - name: تثبيت الاعتماديات
         run: npm install
+
+      - name: إنشاء مجلد dist وتحضير الملفات
+        run: |
+          mkdir -p dist
+          cp index.html dist/
+          cp -r js dist/
+          cp -r icons dist/
+          cp service-worker.js dist/
+          cp manifest.json dist/
 
       - name: إضافة منصة أندرويد
         run: npx cap add android
 
-      - name: مزامنة الملفات مع مشروع أندرويد
+      - name: مزامنة الملفات
         run: npx cap sync android
 
       - name: بناء ملف APK
         working-directory: android
         run: chmod +x gradlew && ./gradlew assembleDebug
 
-      - name: رفع APK كملف تحميل جاهز
+      - name: رفع APK
         uses: actions/upload-artifact@v4
         with:
           name: nabaa-billing-apk
