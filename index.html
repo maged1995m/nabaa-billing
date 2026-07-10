@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
 <meta name="theme-color" content="#123B44">
+<meta name="description" content="نبع - نظام فوترة المشتركين (أوفلاين كامل)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>نبع — نظام فوترة المشتركين</title>
 <link rel="manifest" href="manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -326,18 +329,20 @@ textarea{ resize:vertical; min-height:64px; }
 <div id="print-area" style="display:none;"></div>
 
 <script>
-window.APP_CONFIG = { PERSIST: true, AUTO_SEED: false };
+window.APP_CONFIG = { PERSIST: true, AUTO_SEED: false, REQUIRE_LOGIN: true };
 </script>
-<!-- ملفات Capacitor اختيارية: تُنسخ تلقائياً من node_modules عبر "npm install" (postinstall) —
-     راجع scripts/copy-capacitor-web-assets.js وREADME. تُستخدم فقط عند تحويل التطبيق إلى APK حقيقي.
-     إن لم تكن موجودة بعد (كحال المعاينة هنا) يتجاهلها المتصفح بصمت ويعمل التطبيق بشكل طبيعي عبر localStorage. -->
-<script src="js/vendor/capacitor.js" onerror="this.remove()"></script>
+
+<!-- Capacitor Core - تُحمّل تلقائياً من js/vendor/ بعد npm install -->
+<script src="js/vendor/capacitor.js" onerror="console.warn('ملفات Capacitor غير متاحة - سيعمل عبر localStorage')"></script>
 <script src="js/vendor/capacitor-filesystem.js" onerror="this.remove()"></script>
-<!-- مكتبة Excel (SheetJS): تُستخدم نسخة محلية داخل js/vendor/ (تُنسخ تلقائياً عبر npm install، تعمل أوفلاين
-     بالكامل في تطبيق الـ APK)، وإن لم تكن موجودة بعد يجرّب المتصفح تحميلها من الإنترنت تلقائياً (مفيد فقط
-     أثناء المعاينة/الاختبار قبل بناء المشروع؛ استيراد/تصدير Excel يحتاج إنترنت في هذه الحالة فقط). -->
-<script src="js/vendor/xlsx.full.min.js" onerror="this.onerror=null;this.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'"></script>
+
+<!-- SheetJS (Excel) - تُحمّل من js/vendor/ محلياً، أو من الإنترنت كبديل -->
+<script src="js/vendor/xlsx.full.min.js" onerror="this.onerror=null;this.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';"></script>
+
+<!-- QR Code Library -->
 <script src="js/qrcode.js"></script>
+
+<!-- Main App -->
 <script src="js/app.js"></script>
 </body>
 </html>
