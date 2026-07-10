@@ -1,0 +1,17 @@
+{
+  "name": "نبع — نظام فوترة المشتركين",
+  "short_name": "نبع",
+  "description": "نظام أوفلاين لإدارة اشتراكات المياه/الكهرباء وإصدار الفواتير وتحصيل الدفعات",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#F6F3EC",
+  "theme_color": "#123B44",
+  "lang": "ar",
+  "dir": "rtl",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

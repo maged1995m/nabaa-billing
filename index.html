@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#123B44">
+<title>نبع — نظام فوترة المشتركين</title>
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#123B44;
+  --ink-2:#0C2B32;
+  --aqua:#1F8A8C;
+  --aqua-light:#E4F2F1;
+  --amber:#D98E3B;
+  --amber-light:#FBEDDA;
+  --paper:#F6F3EC;
+  --paper-2:#EFEBE0;
+  --card:#FFFFFF;
+  --line:#DDE3DF;
+  --ink-soft:#5B7278;
+  --ink-faint:#8CA0A4;
+  --danger:#B3432B;
+  --danger-light:#F7E5DF;
+  --success:#3F7D5C;
+  --success-light:#E3EFE7;
+  --radius:10px;
+  --shadow: 0 1px 2px rgba(18,59,68,.06), 0 4px 16px rgba(18,59,68,.06);
+  --font-display: 'Cairo', sans-serif;
+  --font-num: 'JetBrains Mono', monospace;
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0;
+  font-family: var(--font-display);
+  background: var(--paper);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select, textarea{ font-family: inherit; }
+::selection{ background: var(--aqua); color:#fff; }
+
+/* scrollbar */
+::-webkit-scrollbar{ width:10px; height:10px; }
+::-webkit-scrollbar-thumb{ background: var(--line); border-radius:8px; }
+::-webkit-scrollbar-track{ background: transparent; }
+
+/* ===== App shell ===== */
+#app{ display:flex; min-height:100vh; }
+
+.sidebar{
+  width:230px; flex-shrink:0;
+  background: linear-gradient(180deg, var(--ink) 0%, var(--ink-2) 100%);
+  color:#EAF3F2;
+  display:flex; flex-direction:column;
+  position:sticky; top:0; height:100vh;
+  z-index: 20;
+}
+.brand{
+  display:flex; align-items:center; gap:10px;
+  padding:20px 18px 16px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+}
+.brand-mark{
+  width:36px; height:36px; border-radius:9px;
+  background: var(--aqua);
+  display:flex; align-items:center; justify-content:center;
+  flex-shrink:0;
+}
+.brand-mark svg{ width:20px; height:20px; }
+.brand-text b{ display:block; font-size:15px; font-weight:800; letter-spacing:.2px; }
+.brand-text span{ display:block; font-size:10.5px; color:#9FC2C0; margin-top:1px; }
+
+.nav{ padding:14px 10px; flex:1; overflow-y:auto; }
+.nav-group-label{
+  font-size:10.5px; color:#7FA6A3; text-transform:uppercase; letter-spacing:.08em;
+  margin:14px 10px 6px; font-weight:700;
+}
+.nav-item{
+  display:flex; align-items:center; gap:10px;
+  padding:9px 12px; margin:2px 0; border-radius:8px;
+  color:#CFE4E2; text-decoration:none; font-size:13.5px; font-weight:600;
+  cursor:pointer; border:none; background:transparent; width:100%; text-align:right;
+  transition: background .12s ease, color .12s ease;
+}
+.nav-item:hover{ background: rgba(255,255,255,.06); color:#fff; }
+.nav-item.active{ background: var(--aqua); color:#fff; }
+.nav-item svg{ width:17px; height:17px; flex-shrink:0; opacity:.9; }
+.nav-item .badge{
+  margin-inline-start:auto; background: rgba(255,255,255,.15);
+  font-size:10.5px; padding:1px 6px; border-radius:20px; font-family: var(--font-num);
+}
+.nav-item.active .badge{ background: rgba(255,255,255,.28); }
+
+.sidebar-foot{
+  padding:12px 16px 16px; border-top:1px solid rgba(255,255,255,.08);
+  font-size:10.5px; color:#7FA6A3; line-height:1.6;
+}
+
+.main{ flex:1; min-width:0; display:flex; flex-direction:column; }
+
+.topbar{
+  height:60px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 22px; background: var(--card); border-bottom:1px solid var(--line);
+  position:sticky; top:0; z-index:10;
+}
+.topbar h1{ font-size:16px; font-weight:800; margin:0; }
+.topbar .sub{ font-size:12px; color: var(--ink-soft); font-weight:500; margin-top:1px;}
+.cycle-pill{
+  display:flex; align-items:center; gap:7px;
+  background: var(--aqua-light); color: var(--ink); border:1px solid #CDE7E5;
+  padding:6px 12px; border-radius:20px; font-size:12.5px; font-weight:700;
+}
+.cycle-pill .dot{ width:7px; height:7px; border-radius:50%; background: var(--success); box-shadow:0 0 0 3px var(--success-light);}
+.cycle-pill.closed .dot{ background: var(--ink-faint); box-shadow:0 0 0 3px #E7ECEA; }
+
+.content{ padding:22px; flex:1; }
+.view{ display:none; animation: fade .18s ease; }
+.view.active{ display:block; }
+@keyframes fade{ from{ opacity:0; transform: translateY(4px);} to{opacity:1; transform:none;} }
+
+.view-head{ display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:18px; flex-wrap:wrap; gap:10px;}
+.view-head h2{ font-size:20px; margin:0 0 3px; font-weight:800; }
+.view-head p{ margin:0; font-size:12.5px; color:var(--ink-soft); }
+.view-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+
+/* ===== Buttons ===== */
+.btn{
+  display:inline-flex; align-items:center; gap:6px;
+  border-radius:8px; border:1px solid var(--line); background:#fff; color:var(--ink);
+  font-size:13px; font-weight:700; padding:9px 14px; cursor:pointer;
+  transition: all .12s ease; white-space:nowrap;
+}
+.btn svg{ width:15px; height:15px; }
+.btn:hover{ border-color: var(--aqua); color: var(--aqua); }
+.btn-primary{ background: var(--aqua); border-color: var(--aqua); color:#fff; }
+.btn-primary:hover{ background:#187577; border-color:#187577; color:#fff; }
+.btn-dark{ background: var(--ink); border-color: var(--ink); color:#fff; }
+.btn-dark:hover{ background: var(--ink-2); color:#fff; }
+.btn-danger{ color: var(--danger); }
+.btn-danger:hover{ background: var(--danger-light); border-color: var(--danger); }
+.btn-ghost{ border-color: transparent; background: transparent; }
+.btn-ghost:hover{ background: var(--paper-2); border-color:transparent; color:var(--ink); }
+.btn-sm{ padding:6px 10px; font-size:12px; border-radius:7px; }
+.btn:disabled{ opacity:.45; cursor:not-allowed; }
+.btn-icon{ padding:8px; }
+
+/* ===== Cards / Grid ===== */
+.grid{ display:grid; gap:14px; }
+.grid-4{ grid-template-columns:repeat(4,1fr); }
+.grid-3{ grid-template-columns:repeat(3,1fr); }
+.grid-2{ grid-template-columns:2fr 1fr; }
+@media (max-width:1000px){ .grid-4{grid-template-columns:repeat(2,1fr);} .grid-3{grid-template-columns:repeat(1,1fr);} .grid-2{grid-template-columns:1fr;} }
+
+.card{
+  background: var(--card); border:1px solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.card-pad{ padding:18px; }
+.card-head{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 18px; border-bottom:1px solid var(--line);
+}
+.card-head h3{ margin:0; font-size:14.5px; font-weight:800; }
+.card-head .hint{ font-size:11.5px; color:var(--ink-faint); font-weight:600;}
+
+.stat{ padding:16px 18px; }
+.stat .label{ font-size:12px; color:var(--ink-soft); font-weight:700; display:flex; align-items:center; gap:6px;}
+.stat .label svg{ width:14px; height:14px; }
+.stat .value{ font-family: var(--font-num); font-size:26px; font-weight:700; margin-top:8px; color:var(--ink); }
+.stat .foot{ font-size:11.5px; color:var(--ink-faint); margin-top:5px; font-weight:600;}
+.stat.accent-amber .value{ color: var(--amber); }
+.stat.accent-danger .value{ color: var(--danger); }
+.stat.accent-success .value{ color: var(--success); }
+
+/* meter gauge */
+.gauge-wrap{ display:flex; align-items:center; gap:16px; padding:6px 4px; }
+.gauge-info b{ display:block; font-size:22px; font-family:var(--font-num); }
+.gauge-info span{ font-size:11.5px; color:var(--ink-soft); font-weight:600; }
+
+/* ===== Table ===== */
+.table-scroll{ overflow:auto; }
+table{ width:100%; border-collapse:collapse; font-size:13px; }
+thead th{
+  text-align:right; padding:10px 14px; background: var(--paper-2); color: var(--ink-soft);
+  font-size:11.5px; font-weight:800; text-transform:uppercase; letter-spacing:.03em;
+  border-bottom:1px solid var(--line); white-space:nowrap; position:sticky; top:0;
+}
+tbody td{ padding:11px 14px; border-bottom:1px solid var(--line); white-space:nowrap; }
+tbody tr:last-child td{ border-bottom:none; }
+tbody tr:hover{ background: var(--aqua-light); }
+.num{ font-family: var(--font-num); font-weight:600; }
+.muted{ color: var(--ink-faint); }
+.text-cell{ white-space:normal; max-width:220px; }
+
+.badge{
+  display:inline-flex; align-items:center; gap:4px;
+  font-size:11px; font-weight:800; padding:3px 9px; border-radius:20px;
+}
+.badge-success{ background: var(--success-light); color: var(--success); }
+.badge-amber{ background: var(--amber-light); color:#9a6323; }
+.badge-danger{ background: var(--danger-light); color: var(--danger); }
+.badge-muted{ background: var(--paper-2); color: var(--ink-soft); }
+
+/* ===== Forms ===== */
+.toolbar{ display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; align-items:center; }
+.search-box{ position:relative; flex:1; min-width:200px; max-width:340px; }
+.search-box svg{ position:absolute; inset-inline-start:11px; top:50%; transform:translateY(-50%); width:15px; height:15px; color: var(--ink-faint); }
+.search-box input{ width:100%; padding:9px 34px 9px 12px; }
+
+label{ display:block; font-size:12.5px; font-weight:700; margin-bottom:5px; color: var(--ink-soft); }
+input[type=text], input[type=number], input[type=date], input[type=tel], input[type=search], select, textarea{
+  width:100%; padding:9px 11px; border-radius:8px; border:1px solid var(--line);
+  background:#fff; font-size:13.5px; color: var(--ink); outline:none;
+  transition: border-color .12s ease, box-shadow .12s ease;
+}
+input:focus, select:focus, textarea:focus{ border-color: var(--aqua); box-shadow: 0 0 0 3px var(--aqua-light); }
+textarea{ resize:vertical; min-height:64px; }
+.field{ margin-bottom:14px; }
+.field-row{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.field-row-3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+@media (max-width:640px){ .field-row, .field-row-3{ grid-template-columns:1fr; } }
+.hint-text{ font-size:11.5px; color: var(--ink-faint); margin-top:4px; }
+.readonly-box{
+  background: var(--paper-2); border-radius:8px; padding:9px 11px; font-family:var(--font-num);
+  font-weight:700; font-size:13.5px; color: var(--ink-soft);
+}
+
+/* ===== Modal ===== */
+.overlay{
+  position:fixed; inset:0; background: rgba(12,43,50,.45); backdrop-filter: blur(1px);
+  display:none; align-items:flex-start; justify-content:center; z-index:100; padding:40px 16px; overflow-y:auto;
+}
+.overlay.open{ display:flex; }
+.modal{
+  background:#fff; border-radius:14px; width:100%; max-width:520px; box-shadow: 0 20px 60px rgba(0,0,0,.25);
+  animation: pop .16s ease;
+}
+.modal.wide{ max-width:760px; }
+@keyframes pop{ from{ opacity:0; transform: translateY(10px) scale(.98);} to{opacity:1; transform:none;} }
+.modal-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid var(--line); }
+.modal-head h3{ margin:0; font-size:15.5px; font-weight:800; }
+.modal-body{ padding:20px; max-height:70vh; overflow-y:auto; }
+.modal-foot{ display:flex; justify-content:flex-end; gap:8px; padding:14px 20px; border-top:1px solid var(--line); }
+
+/* ===== Empty state ===== */
+.empty{ text-align:center; padding:50px 20px; color: var(--ink-soft); }
+.empty svg{ width:46px; height:46px; color: var(--ink-faint); margin-bottom:10px; }
+.empty b{ display:block; font-size:14.5px; color:var(--ink); margin-bottom:4px; }
+.empty span{ font-size:12.5px; }
+
+/* toast */
+#toast-wrap{ position:fixed; bottom:20px; left:20px; z-index:200; display:flex; flex-direction:column; gap:8px; }
+.toast{
+  background: var(--ink); color:#fff; padding:11px 16px; border-radius:9px; font-size:13px; font-weight:700;
+  box-shadow: 0 8px 24px rgba(0,0,0,.25); display:flex; align-items:center; gap:8px; animation: toastin .18s ease;
+  min-width:220px;
+}
+.toast.success{ background: var(--success); }
+.toast.error{ background: var(--danger); }
+@keyframes toastin{ from{opacity:0; transform: translateY(10px);} to{opacity:1; transform:none;} }
+
+/* invoice print */
+.invoice-sheet{ background:#fff; border:1px solid var(--line); border-radius:10px; padding:26px; }
+.invoice-top{ display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid var(--ink); padding-bottom:14px; margin-bottom:16px;}
+.invoice-org b{ font-size:17px; }
+.invoice-org div{ font-size:11.5px; color:var(--ink-soft); margin-top:2px;}
+.invoice-meta{ text-align:left; font-size:12px; }
+.invoice-meta div{ margin-bottom:3px; }
+.invoice-grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+.invoice-box{ background: var(--paper-2); border-radius:8px; padding:12px 14px; font-size:12.5px; }
+.invoice-box b{ display:block; margin-bottom:6px; font-size:11.5px; color: var(--ink-soft); text-transform:uppercase; letter-spacing:.04em;}
+.invoice-total-row{ display:flex; justify-content:space-between; padding:9px 0; border-bottom:1px dashed var(--line); font-size:13px; }
+.invoice-total-row.grand{ border-bottom:none; border-top:2px solid var(--ink); margin-top:4px; padding-top:12px; font-size:16px; font-weight:800; }
+@media print{
+  body *{ visibility:hidden; }
+  #print-area, #print-area *{ visibility:visible; }
+  #print-area{ position:absolute; inset:0; padding:20px; }
+  .no-print{ display:none !important; }
+}
+
+@media (max-width: 860px){
+  .sidebar{ position:fixed; right:0; transform: translateX(100%); transition: transform .2s ease; box-shadow: -10px 0 30px rgba(0,0,0,.2); }
+  .sidebar.open{ transform:none; }
+  .menu-toggle{ display:inline-flex !important; }
+  .content{ padding:14px; }
+  .topbar{ padding:0 14px; }
+}
+.menu-toggle{ display:none; }
+</style>
+</head>
+<body>
+<div id="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M12 3s6 6.5 6 11a6 6 0 1 1-12 0c0-4.5 6-11 6-11Z"/></svg>
+      </div>
+      <div class="brand-text"><b>نَبْع</b><span>نظام فوترة المشتركين</span></div>
+    </div>
+    <nav class="nav" id="nav"></nav>
+    <div class="sidebar-foot" id="sidebarFoot">يعمل بدون إنترنت — بياناتك محفوظة على جهازك فقط</div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <button class="btn btn-icon menu-toggle" id="menuToggle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+        <div>
+          <h1 id="pageTitle">لوحة التحكم</h1>
+          <div class="sub" id="pageSub">نظرة عامة على الاشتراكات والدورة الحالية</div>
+        </div>
+      </div>
+      <div class="cycle-pill" id="cyclePill"><span class="dot"></span><span id="cyclePillText">—</span></div>
+    </div>
+    <div class="content" id="content"></div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
+<div id="toast-wrap"></div>
+<div id="print-area" style="display:none;"></div>
+
+<script>
+window.APP_CONFIG = { PERSIST: true, AUTO_SEED: false };
+</script>
+<!-- ملفات Capacitor اختيارية: تُنسخ تلقائياً من node_modules عبر "npm install" (postinstall) —
+     راجع scripts/copy-capacitor-web-assets.js وREADME. تُستخدم فقط عند تحويل التطبيق إلى APK حقيقي.
+     إن لم تكن موجودة بعد (كحال المعاينة هنا) يتجاهلها المتصفح بصمت ويعمل التطبيق بشكل طبيعي عبر localStorage. -->
+<script src="js/vendor/capacitor.js" onerror="this.remove()"></script>
+<script src="js/vendor/capacitor-filesystem.js" onerror="this.remove()"></script>
+<!-- مكتبة Excel (SheetJS): تُستخدم نسخة محلية داخل js/vendor/ (تُنسخ تلقائياً عبر npm install، تعمل أوفلاين
+     بالكامل في تطبيق الـ APK)، وإن لم تكن موجودة بعد يجرّب المتصفح تحميلها من الإنترنت تلقائياً (مفيد فقط
+     أثناء المعاينة/الاختبار قبل بناء المشروع؛ استيراد/تصدير Excel يحتاج إنترنت في هذه الحالة فقط). -->
+<script src="js/vendor/xlsx.full.min.js" onerror="this.onerror=null;this.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'"></script>
+<script src="js/qrcode.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
