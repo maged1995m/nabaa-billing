@@ -16,7 +16,7 @@ jobs:
       - name: تجهيز Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: تجهيز Java (مطلوب لبناء أندرويد)
         uses: actions/setup-java@v4
