@@ -1,0 +1,9 @@
+{
+  "appId": "com.nabaa.billing",
+  "appName": "نبع - فوترة المشتركين",
+  "webDir": ".",
+  "bundledWebRuntime": false,
+  "android": {
+    "allowMixedContent": true
+  }
+}
