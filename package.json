@@ -1,7 +1,7 @@
 {
   "name": "nabaa-billing",
-  "version": "1.3.0",
-  "description": "نبع - نظام فوترة المشتركين (أوفلاين) - يحفظ البيانات فعلياً على تخزين الجهاز عبر Capacitor Filesystem، ويدعم استيراد/تصدير Excel",
+  "version": "1.4.0",
+  "description": "نبع - نظام فوترة المشتركين (أوفلاين كامل) - يحفظ البيانات على الجهاز عبر Capacitor، ويدعم Excel وQR codes",
   "scripts": {
     "serve": "npx serve . -p 8080",
     "postinstall": "node scripts/copy-capacitor-web-assets.js",
@@ -21,4 +21,3 @@
   "license": "UNLICENSED",
   "private": true
 }
-
